@@ -29,7 +29,15 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False):
+    # 打包成 exe 后：可写的东西（config.json / logs）放在 exe 旁边，
+    # 只读的资源（ui.html）在 PyInstaller 的解包目录里。
+    BASE = Path(sys.executable).resolve().parent
+    ASSETS = Path(getattr(sys, "_MEIPASS", BASE))
+else:
+    BASE = ASSETS = Path(__file__).resolve().parent
+
+ROOT = BASE
 LOG_DIR = ROOT / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
@@ -39,8 +47,10 @@ CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 # --------------------------------------------------------------------------- 配置
 
 def load_config() -> dict:
-    for name in ("config.json", "config.example.json"):
-        path = ROOT / name
+    candidates = [ROOT / "config.json", ASSETS / "config.json",
+                  ROOT / "config.example.json", ASSETS / "config.example.json"]
+    for path in candidates:
+        name = path.name
         if path.exists():
             try:
                 cfg = json.loads(path.read_text(encoding="utf-8"))
@@ -403,7 +413,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
-            html = (ROOT / "ui.html").read_bytes()
+            html = (ASSETS / "ui.html").read_bytes()
             self._send(200, html, "text/html; charset=utf-8")
             return
         if path == "/api/status":

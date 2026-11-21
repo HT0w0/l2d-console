@@ -43,9 +43,21 @@ pythonw desktop.py                   # 无控制台窗口，直接出窗口
 
 - 没装 `pywebview` 也不会崩：会退化成用 Edge/Chrome 的 `--app=…` 模式，外观同样是独立窗口，只是任务栏图标是浏览器的。
 - 想做个**桌面快捷方式**：目标填 `pythonw.exe`，参数填 `"<本目录>\desktop.py"`，起始位置填本目录，图标用 `docs/app.ico`。
-- 想要**完全不依赖 Python** 的单文件 exe：`pip install pyinstaller` 然后
-  `pyinstaller --noconsole --onefile --icon docs/app.ico --add-data "ui.html;." --add-data "config.example.json;." desktop.py`。
-  （要先把 `app.py`/`ui.html` 一起打进去，注意 `--add-data` 的 Windows 分隔符是分号。）
+
+### 已经打好的 exe
+
+[Releases](https://github.com/HT0w0/l2d-console/releases) 里有 `L2DConsole.exe`（单文件，约 12 MB，双击即用，目标机器**不需要装 Python**）。
+把它放到任意目录，旁边放一份 `config.json`（照 `config.example.json` 改），双击即可。
+
+自己打：
+```bash
+pip install pyinstaller
+pyinstaller --noconsole --onefile --icon "docs/app.ico" --name L2DConsole ^
+  --add-data "ui.html;." --add-data "config.example.json;." --add-data "docs/app.ico;docs" ^
+  --hidden-import app --hidden-import webview.platforms.edgechromium desktop.py
+```
+
+（`--add-data` 的 Windows 分隔符是分号；`--hidden-import app` 必须加，因为 `desktop.py` 是动态 import 的，PyInstaller 扫不到。）
 
 ## 快速开始
 

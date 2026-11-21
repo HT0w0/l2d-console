@@ -57,10 +57,25 @@ def _wait_ready(port: int, timeout: float = 25.0) -> bool:
     return False
 
 
-def _start_server(port: int) -> subprocess.Popen | None:
-    """后台起 app.py。端口已经被占（比如已经开着一个）就不再起第二个。"""
+def _start_server(port: int):
+    """后台起 HTTP 服务。端口已经被占（比如已经开着一个）就不再起第二个。
+
+    打包成 exe 时没有 app.py 这个文件可执行，所以改成在同一进程的线程里起服务；
+    源码运行时仍然用子进程（关窗时能干净地收掉，也不污染当前进程）。
+    """
     if _port_open(port):
         return None
+
+    if getattr(sys, "frozen", False):
+        import importlib
+        import threading
+        from http.server import ThreadingHTTPServer
+
+        mod = importlib.import_module("app")  # 冻结时 app 已作为模块打进去
+        server = ThreadingHTTPServer(("127.0.0.1", port), mod.Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        return server
+
     creationflags = 0
     if sys.platform == "win32":
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -149,12 +164,15 @@ def main() -> int:
                 print(f"原生窗口起不来（{type(exc).__name__}: {exc}），改用浏览器窗口。", file=sys.stderr)
                 _open_browser_app_mode(url)
     finally:
-        if server and server.poll() is None:
-            server.terminate()
-            try:
-                server.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server.kill()
+        if server is not None:
+            if hasattr(server, "shutdown"):      # 进程内线程模式
+                server.shutdown()
+            elif server.poll() is None:          # 子进程模式
+                server.terminate()
+                try:
+                    server.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    server.kill()
     return 0
 
 
