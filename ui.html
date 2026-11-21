@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>大肥鱼 · 直播 / 陪看 控制台</title>
+<style>
+  :root{
+    --bg:#0d1620; --card:#14212d; --card2:#182a38; --line:#22384a;
+    --txt:#e8f1f7; --dim:#8fa8ba; --ok:#3ddc97; --warn:#ffc857; --bad:#ff6b6b; --hot:#5cc8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#17324a,var(--bg));
+       color:var(--txt);font:15px/1.55 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  header{display:flex;align-items:center;gap:14px;padding:18px 22px 6px}
+  header h1{font-size:19px;margin:0;letter-spacing:.5px}
+  header .sub{color:var(--dim);font-size:13px}
+  .wrap{padding:12px 22px 40px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+  .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+        border-radius:14px;padding:16px 16px 14px}
+  .card h2{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px;color:#cfe3f0}
+  .card h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 3px #ffffff10}
+  .dot.on{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .dot.off{background:#47596b}
+  .dot.bad{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+  .dot.warn{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+  .rows{display:grid;gap:6px;margin:8px 0 12px}
+  .row{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;
+       border-bottom:1px dashed #ffffff0f;padding-bottom:4px}
+  .row b{font-weight:600;color:#fff}
+  .k{color:var(--dim)}
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  button{cursor:pointer;border:1px solid var(--line);background:#1b2f40;color:var(--txt);
+         padding:8px 13px;border-radius:9px;font-size:13.5px;transition:.15s;font-family:inherit}
+  button:hover{background:#24405a;border-color:#33586f}
+  button:disabled{opacity:.42;cursor:not-allowed}
+  button.primary{background:#1d5c8a;border-color:#2b7fb8}
+  button.primary:hover{background:#24719f}
+  button.danger{background:#5a2331;border-color:#8b3348}
+  button.danger:hover{background:#743043}
+  input[type=text]{background:#0f1c27;border:1px solid var(--line);color:var(--txt);
+       border-radius:9px;padding:8px 11px;font-size:13.5px;font-family:inherit;width:130px}
+  pre{background:#0b141d;border:1px solid #1b2c3b;border-radius:10px;padding:10px;margin:8px 0 0;
+      font-size:12px;line-height:1.5;color:#9fbccf;max-height:150px;overflow:auto;white-space:pre-wrap}
+  .hint{color:var(--dim);font-size:12.5px;margin-top:10px}
+  .toast{position:fixed;right:18px;bottom:18px;background:#1b3145;border:1px solid #2e4f68;
+         padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(8px);
+         transition:.2s;max-width:420px}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<header>
+  <h1>大肥鱼 · 直播 / 陪看 控制台</h1>
+  <span class="sub" id="stamp">连接中…</span>
+</header>
+
+<div class="wrap">
+
+  <section class="card">
+    <h2><span class="dot" id="dot-wb"></span>工作台（鲸语 Studio）</h2>
+    <div class="rows" id="wb-rows"></div>
+    <div class="btns">
+      <button class="primary" data-act="start_workbench">启动工作台</button>
+      <button data-act="warmup_voice">预热语音引擎</button>
+      <button class="danger" data-act="stop_workbench">停止</button>
+      <button data-act="open_livehime">打开直播姬</button>
+    </div>
+    <div class="hint">工作台负责渲染与合成；语音引擎第一次加载约 35 秒。</div>
+  </section>
+
+  <section class="card">
+    <h2><span class="dot" id="dot-live"></span>直播间</h2>
+    <div class="rows" id="room-rows"></div>
+    <div class="btns" style="margin-bottom:8px">
+      <span class="k" style="align-self:center">房间号</span>
+      <input type="text" id="room" placeholder="26491042">
+    </div>
+    <div class="btns">
+      <button class="primary" data-act="start_bridge">开弹幕桥</button>
+      <button data-act="start_reply">开自动回复</button>
+      <button class="danger" data-act="stop_bridge">停弹幕桥</button>
+      <button class="danger" data-act="stop_reply">停自动回复</button>
+    </div>
+    <pre id="log-bridge">（弹幕桥日志）</pre>
+  </section>
+
+  <section class="card">
+    <h2><span class="dot" id="dot-host"></span>值守（不依赖对话）</h2>
+    <div class="rows" id="host-rows"></div>
+    <div class="btns">
+      <button class="primary" data-act="start_host">开始值守</button>
+      <button class="danger" data-act="stop_host">停止值守</button>
+      <button class="danger" data-act="stop_all">一键停全部</button>
+      <button data-act="open_logs">打开日志目录</button>
+    </div>
+    <div class="hint">值守会自己盯开播状态：开播才拉起弹幕桥与自动回复，下播自动收工。</div>
+    <pre id="log-host">（值守日志）</pre>
+  </section>
+
+  <section class="card">
+    <h2><span class="dot" id="dot-browser"></span>陪看用的浏览器</h2>
+    <div class="rows" id="browser-rows"></div>
+    <div class="btns" style="margin-bottom:8px">
+      <input type="text" id="watch-url" placeholder="https://www.bilibili.com" style="width:280px">
+    </div>
+    <div class="btns">
+      <button class="primary" data-act="open_watch_browser">开（带调试端口）</button>
+      <button class="danger" data-act="close_watch_browser">关</button>
+    </div>
+    <div class="hint">陪看要读播放进度，所以浏览器必须带调试端口打开；关掉浮窗等于挂断。</div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const CHIP = (ok, text) => `<span style="color:${ok ? 'var(--ok)' : 'var(--bad)'}">${text}</span>`;
+const NEUTRAL = (text) => `<span style="color:var(--dim)">${text}</span>`;
+
+function rows(el, pairs){
+  el.innerHTML = pairs.map(([k,v]) => `<div class="row"><span class="k">${k}</span><b>${v ?? '—'}</b></div>`).join('');
+}
+function dot(id, cls){ const d=$(id); d.className = 'dot ' + cls; }
+
+let roomInput = $('room');
+roomInput.value = localStorage.getItem('l2d-room') || '';
+roomInput.onchange = () => localStorage.setItem('l2d-room', roomInput.value.trim());
+$('watch-url').value = localStorage.getItem('l2d-watch-url') || 'https://www.bilibili.com';
+$('watch-url').onchange = () => localStorage.setItem('l2d-watch-url', $('watch-url').value.trim());
+
+async function refresh(){
+  try{
+    const s = await (await fetch('/api/status', {cache:'no-store'})).json();
+    $('stamp').textContent = `状态更新 ${s.time} · 配置 ${s.config.source}` + (s.config.room ? ` · 房间 ${s.config.room}` : '');
+
+    const wb = s.workbench || {};
+    dot('dot-wb', wb.alive ? (wb.ready ? 'on' : 'warn') : 'off');
+    rows($('wb-rows'), [
+      ['服务', wb.alive ? CHIP(true,'运行中') : NEUTRAL('未启动')],
+      ['语音引擎', wb.ready ? CHIP(true,'已就绪') : CHIP(false, wb.engine || '未加载')],
+      ['设备', wb.device || '—'],
+      ['采样率', wb.sampleRate ? wb.sampleRate + ' Hz' : '—'],
+      ['加载耗时', wb.loadSeconds ? wb.loadSeconds.toFixed(1) + ' s' : '—'],
+    ]);
+
+    const r = s.room || {};
+    dot('dot-live', r.configured ? (r.live ? 'on' : 'off') : 'warn');
+    rows($('room-rows'), [
+      ['房间', r.room || '未配置'],
+      ['直播状态', r.configured ? (r.live ? CHIP(true,'正在播') : NEUTRAL('未开播')) : '—'],
+      ['标题', r.title || '—'],
+      ['在线', r.online ?? '—'],
+      ['弹幕桥', s.jobs.bridge ? CHIP(true,'运行中') : NEUTRAL('停')],
+      ['自动回复', s.jobs.reply ? CHIP(true,'运行中') : NEUTRAL('停')],
+    ]);
+
+    dot('dot-host', s.jobs.host ? 'on' : 'off');
+    rows($('host-rows'), [['值守', s.jobs.host ? CHIP(true,'运行中') : NEUTRAL('未运行')]]);
+
+    const b = s.browser || {};
+    dot('dot-browser', b.alive ? 'on' : 'off');
+    rows($('browser-rows'), [
+      ['调试端口', b.port ? `:${b.port} ${b.alive ? CHIP(true,'在') : CHIP(false,'关')}` : '—'],
+      ['打开的页面', b.pages ?? '—'],
+      ['标题', b.title || '—'],
+      ['地址', (b.url || '—').slice(0, 70)],
+    ]);
+
+    $('log-bridge').textContent = (s.logs.bridge || []).join('\n') || '（还没有日志）';
+    $('log-host').textContent = (s.logs.host || []).join('\n') || '（还没有日志）';
+  }catch(e){
+    $('stamp').textContent = '连不上控制台（服务可能已退出）';
+  }
+}
+
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4200);
+}
+
+document.querySelectorAll('button[data-act]').forEach(btn => {
+  btn.onclick = async () => {
+    const act = btn.dataset.act;
+    const params = {};
+    const room = ($('room').value || '').trim();
+    if (room) params.room = room;
+    if (act === 'open_watch_browser') params.url = ($('watch-url').value || '').trim();
+    btn.disabled = true;
+    try{
+      const res = await (await fetch('/api/action', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action: act, params})
+      })).json();
+      const ok = res.ok !== false;
+      toast(`${ok ? '✓' : '✗'} ${act}：` + (res.error || res.note || (res.killed ? `结束了 ${res.killed} 个进程` : '完成')));
+    }catch(e){
+      toast(`✗ ${act}：请求失败 ${e}`);
+    }finally{
+      btn.disabled = false;
+      setTimeout(refresh, 600);
+    }
+  };
+});
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
