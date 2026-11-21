@@ -28,6 +28,25 @@
 
 所以：**没有模型、没有工作台、没有 DSH，这个面板只会显示一堆「未启动」**——这不是坏了。
 
+## 双击就能开（桌面窗口）
+
+不想开浏览器、也不想点 bat 的话，用 `desktop.py`：
+
+```bash
+python -m pip install pywebview      # 只用一次
+pythonw desktop.py                   # 无控制台窗口，直接出窗口
+```
+
+它会自己把 `app.py` 拉起来，然后用系统自带的 WebView2 开一个**原生窗口**（没有地址栏、没有标签页、关窗即收工）：
+
+![桌面窗口](docs/desktop.png)
+
+- 没装 `pywebview` 也不会崩：会退化成用 Edge/Chrome 的 `--app=…` 模式，外观同样是独立窗口，只是任务栏图标是浏览器的。
+- 想做个**桌面快捷方式**：目标填 `pythonw.exe`，参数填 `"<本目录>\desktop.py"`，起始位置填本目录，图标用 `docs/app.ico`。
+- 想要**完全不依赖 Python** 的单文件 exe：`pip install pyinstaller` 然后
+  `pyinstaller --noconsole --onefile --icon docs/app.ico --add-data "ui.html;." --add-data "config.example.json;." desktop.py`。
+  （要先把 `app.py`/`ui.html` 一起打进去，注意 `--add-data` 的 Windows 分隔符是分号。）
+
 ## 快速开始
 
 ```bash
